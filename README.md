@@ -3,6 +3,11 @@
 Search, read, and export Apple Notes from the terminal by reading the local
 Notes database directly — no AppleScript, no UI automation, no cloud API.
 
+Built for the common case: **you mostly want to look things up, not write
+them.** Recalling what you noted about a project, finding the meeting where a
+decision was made, pulling every note that mentions a library — that is
+read-heavy work, and it is exactly where the existing tooling is weakest.
+
 ```console
 $ apple-notes search "kubernetes" -n 3
    4821  2026-09-08 14:02   Work/Infra/Cluster upgrade notes  (7x)
@@ -17,8 +22,19 @@ $ apple-notes recent --since 2d
 
 ## Why not AppleScript
 
-The usual approach is `osascript` against Notes.app. It works, but the cost
-lands squarely on search. Measured on a real 818-note store:
+Almost every Apple Notes integration drives Notes.app through AppleScript
+(`osascript`). The [`memo`](https://github.com/antoniorodr/memo) CLI does — its
+`get_memo.py` and `id_search_memo.py` shell out to `osascript` — and so does
+the [`apple-notes` skill in
+OpenClaw](https://github.com/openclaw/openclaw/blob/main/skills/apple-notes/SKILL.md)
+and Hermes, which wrap `memo`. Claude's own [Notes
+connector](https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities)
+is likewise a desktop-only, macOS-only extension; its implementation isn't
+public, but Apple Events is the only supported way in.
+
+AppleScript is the right choice for *writing* — it is Apple's supported
+interface and it keeps CloudKit sync intact. But for reading it carries costs
+that are easy to miss. Measured on a real 818-note store:
 
 | Operation | AppleScript | apple-notes-cli |
 | --- | --- | --- |
@@ -26,11 +42,41 @@ lands squarely on search. Measured on a real 818-note store:
 | Fetch one note body | 0.325 s | — |
 | **Full-text search every note** | **~266 s** (extrapolated) | **0.11 s** |
 
-`first note whose id is "…"` is a linear scan inside Notes.app with no index
-behind it, so reading every body costs a third of a second each. That is why
-AppleScript-based tools either search titles only or cache aggressively and
-serve you stale results. Reading the SQLite store sidesteps the whole problem:
-one query, then in-memory decoding of every body.
+**Full-text search is impractical, so tools quietly stop doing it.**
+`first note whose id is "…"` is an unindexed linear scan inside Notes.app, so
+each body costs about a third of a second. Reading all 818 would take over four
+minutes. Faced with that, `memo` searches **titles only** — its
+`search_memo.py` builds a `{title: id}` map and fuzzy-matches against the keys,
+never the bodies. So `memo notes -s "kubernetes"` finds notes *called*
+"kubernetes", not the notes that discuss it. The OpenClaw skill exposes this as
+"fuzzy search" with no indication that note contents are not searched.
+
+**Caching trades freshness for speed, usually silently.** `memo` caches its
+note list to `~/.cache/memo/notes_cache.json` with a 300-second TTL, so a note
+you just wrote can be invisible for five minutes. Neither the skill
+documentation nor the CLI surfaces this, so an agent asking "what did I note
+today?" can be handed a confidently stale answer.
+
+**Other friction that comes with the AppleScript path:**
+
+- **It needs Notes.app.** The app gets launched or scripted in the background,
+  and if it hangs or shows a modal, the integration hangs with it.
+- **It needs Automation permission** (System Settings → Privacy & Security →
+  Automation), granted interactively per client app. That makes unattended use
+  — cron, CI, an SSH session — awkward or impossible.
+- **Bodies arrive as HTML**, so every tool bolts on an HTML-to-Markdown
+  converter and inherits its fidelity bugs.
+- **macOS only**, and it cannot run from the web or iOS at all.
+- **Per-note round trips.** Reading N notes means N `osascript` invocations,
+  each paying process startup plus Apple Events IPC.
+
+Reading the SQLite store sidesteps all of it: one query, then in-memory
+decoding. Full-text search over everything takes ~0.11 s, which is why this
+tool needs no cache and always reflects the live database.
+
+The trade-off is that this only reads; AppleScript remains the right way to
+create and edit notes. The two compose well — see
+[Reading is all it does](#reading-is-all-it-does).
 
 ## Install
 
