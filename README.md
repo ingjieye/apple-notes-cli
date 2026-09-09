@@ -80,6 +80,16 @@ create and edit notes. The two compose well — see
 
 Requires macOS and Python 3.10+.
 
+### Just ask your agent
+
+If you use Claude Code, Claude Desktop, or any coding agent, point it at this
+file and it has everything it needs:
+
+> Read https://github.com/ingjieye/apple-notes-cli/blob/main/README.md and set
+> it up, including the skill.
+
+### The CLI
+
 ```bash
 uv tool install git+https://github.com/ingjieye/apple-notes-cli
 # or
@@ -95,6 +105,53 @@ uv run python -m apple_notes_cli recent
 
 macOS may ask you to grant your terminal access to the Notes container the
 first time. Nothing here needs Full Disk Access on its own.
+
+### The agent skill
+
+[`skills/apple-notes/SKILL.md`](skills/apple-notes/SKILL.md) teaches an agent
+to use this CLI — when to reach for it, how to page from search results to full
+note bodies, and what its limits are. Drop it in place:
+
+```bash
+mkdir -p ~/.claude/skills/apple-notes
+curl -fsSL https://raw.githubusercontent.com/ingjieye/apple-notes-cli/main/skills/apple-notes/SKILL.md \
+  -o ~/.claude/skills/apple-notes/SKILL.md
+```
+
+Use `.claude/skills/` inside a project instead of `~/.claude/skills/` to scope
+it to that project. Then ask your agent things like "what did I note about the
+cluster migration?" or "找一下我记过的会议决定".
+
+<details>
+<summary>Setup steps, if you are an agent reading this</summary>
+
+```bash
+# 1. macOS only; bail out early elsewhere.
+[ "$(uname)" = "Darwin" ] || { echo "macOS required"; exit 1; }
+
+# 2. Install the CLI (uv preferred, pipx as fallback).
+if command -v uv >/dev/null; then
+  uv tool install git+https://github.com/ingjieye/apple-notes-cli
+else
+  pipx install git+https://github.com/ingjieye/apple-notes-cli
+fi
+
+# 3. Install the skill.
+mkdir -p ~/.claude/skills/apple-notes
+curl -fsSL https://raw.githubusercontent.com/ingjieye/apple-notes-cli/main/skills/apple-notes/SKILL.md \
+  -o ~/.claude/skills/apple-notes/SKILL.md
+
+# 4. Verify against the real store. Exit 1 from `search` just means no match.
+apple-notes folders | head -5
+apple-notes recent -n 3
+```
+
+If step 4 reports the database is missing, Notes.app has never been launched on
+this machine. If it raises a permission error, the terminal needs access to the
+Notes container — that is a macOS prompt the user has to accept, not something
+you can grant.
+
+</details>
 
 ## Commands
 
