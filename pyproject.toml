@@ -1,0 +1,33 @@
+[project]
+name = "apple-notes-cli"
+version = "0.1.0"
+description = "Search, read, and export Apple Notes by reading the local database directly — no AppleScript, no UI automation."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "ingjieye" }]
+keywords = ["apple-notes", "macos", "notes", "cli", "search", "markdown", "export"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: MacOS X",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ingjieye/apple-notes-cli"
+Issues = "https://github.com/ingjieye/apple-notes-cli/issues"
+
+[project.scripts]
+apple-notes = "apple_notes_cli.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/apple_notes_cli"]
