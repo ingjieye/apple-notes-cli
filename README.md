@@ -23,14 +23,12 @@ $ apple-notes recent --since 2d
 ## Why not AppleScript
 
 Almost every Apple Notes integration drives Notes.app through AppleScript
-(`osascript`). The [`memo`](https://github.com/antoniorodr/memo) CLI does — its
-`get_memo.py` and `id_search_memo.py` shell out to `osascript` — and so does
-the [`apple-notes` skill in
+(`osascript`): the [`memo`](https://github.com/antoniorodr/memo) CLI does — its
+`get_memo.py` and `id_search_memo.py` shell out to it — as do the
+[`apple-notes` skill in
 OpenClaw](https://github.com/openclaw/openclaw/blob/main/skills/apple-notes/SKILL.md)
-and Hermes, which wrap `memo`. Claude's own [Notes
-connector](https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities)
-is likewise a desktop-only, macOS-only extension; its implementation isn't
-public, but Apple Events is the only supported way in.
+and Hermes, which wrap `memo`, and Claude's own desktop [Notes
+connector](https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities).
 
 AppleScript is the right choice for *writing* — it is Apple's supported
 interface and it keeps CloudKit sync intact. But for reading it carries costs
